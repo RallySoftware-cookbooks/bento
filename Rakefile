@@ -6,6 +6,8 @@ require 'net/http'
 
 # Enables `bundle exec rake do_all[ubuntu-12.04-amd64,centos-7.1-x86_64]
 # http://blog.stevenocchipinti.com/2013/10/18/rake-task-with-an-arbitrary-number-of-arguments/
+
+desc 'Build, Publish, Release a set of platforms'
 task :do_all do |task, args|
   args.extras.each do |a|
     # build stage
