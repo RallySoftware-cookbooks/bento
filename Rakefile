@@ -21,13 +21,6 @@ task :do_all do |task, args|
   Rake::Task['release_all'].invoke
   Rake::Task['release_all'].reenable
 
-  # revoke
-  Rake::Task['revoke_all'].invoke
-  Rake::Task['revoke_all'].reenable
-
-  # delete
-  Rake::Task['delete_all'].invoke
-  Rake::Task['delete_all'].reenable
 end
 
 # bundle exec rake build_box[ubuntu-12.04-amd64]
@@ -45,13 +38,19 @@ task :upload_all do
   end
 end
 
-desc 'Upload box files for all providers'
+desc 'Upload box files to Atlas for all providers'
 task :upload_box, :metadata_file do |f, args|
   metadata = box_metadata(args[:metadata_file])
   create_box(metadata['name'])
   create_box_version(metadata['name'], metadata['version'])
   create_providers(metadata['name'], metadata['version'], metadata['providers'].keys)
   upload_to_atlas(metadata['name'], metadata['version'], metadata['providers'])
+end
+
+desc 'Upload box files to S3 for all providers'
+task :upload_box_s3, :metadata_file do |f, args|
+  metadata = box_metadata(args[:metadata_file])
+  upload_to_s3(metadata['name'], metadata['version'], metadata['providers'])
 end
 
 desc 'Release all boxes for a version'
@@ -174,14 +173,15 @@ def box_metadata(metadata_file)
 end
 
 def build_command(template)
-  cmd = %[./bin/bento build]
+  cmd = %W[./bin/bento build #{template}]
   providers = %W[vmware-iso parallels-iso virtualbox-iso]
-  providers.delete(vmware-iso) if which('vmrun')
-  providers.delete(parallels-iso) if which('prlctl')
-  cmd.insert(1, "--except #{providers.join(",")}")
-  cmd.insert(1, "--mirror #{ENV['PACKER_MIRROR']}") if private?(template)
-  cmd.insert(1, "#{template}.json")
-  cmd
+  providers.delete('virtualbox-iso') if which('vboxmanage')
+  providers.delete('vmware-iso') if which('vmrun')
+  providers.delete('parallels-iso') if which('prlctl')
+  cmd.insert(2, "--except #{providers.join(",")}") if !providers.empty?
+  cmd.insert(2, "--mirror #{ENV['PACKER_MIRROR']}") if private?(template)
+  cmd.insert(2, "--version #{ENV['BENTO_VERSION']}") if ENV['BENTO_VERSION']
+  cmd.join(" ")
 end
 
 def metadata_files
@@ -223,6 +223,18 @@ def create_providers(boxname, version, provider_names)
   end
 end
 
+def upload_to_s3(boxname, version, providers)
+  providers.each do |provider, provider_data|
+	boxfile = provider_data['file']
+    upload_path = "s3://opscode-vm-bento/vagrant/#{provider}/opscode_#{boxname}_chef-provisionerless.box"
+    puts "Uploading the box #{boxfile} to S3, version: #{version}, provider: #{provider}, upload path: #{upload_path}"
+    cmd = %W[s3cmd put builds/#{boxfile} #{upload_path}]
+    cmd.insert(1, ".s3cfg-bento")
+    cmd.insert(1, "--config")
+    sh cmd.join(' ')
+  end
+end
+
 def upload_to_atlas(boxname, version, providers)
   # Extract the upload path
   providers.each do |provider, provider_data|
@@ -261,7 +273,7 @@ def revoke_version(version)
 
   boxes.each do |b|
     b['versions'].each do |v|
-      if v['version'] == version
+      if v['version'] == '2.0.0'
         puts "Revoking version #{v['version']} of box #{b['name']}"
         req = request('put', v['revoke_url'], { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
         if req.code == '200'
@@ -280,7 +292,7 @@ def delete_version(version)
 
   boxes.each do |b|
     b['versions'].each do |v|
-      if v['version'] == version
+      if v['version'] == '2.0.0'
         puts "Deleting version #{v['version']} of box #{b['name']}"
         puts "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}"
         req = request('delete', "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}", { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
