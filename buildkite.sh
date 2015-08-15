@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+env
+
 echo "--- Build Boxes"
 rake build_box[$BOX_LIST]
 
