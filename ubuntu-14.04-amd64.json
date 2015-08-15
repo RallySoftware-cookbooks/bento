@@ -212,7 +212,7 @@
     "iso_name": "ubuntu-14.04.4-server-amd64.iso",
     "metadata": "floppy/dummy_metadata.json",
     "mirror": "http://releases.ubuntu.com",
-    "mirror_directory": "14.04.2",
+    "mirror_directory": "14.04.4",
     "name": "ubuntu-14.04",
     "no_proxy": "{{env `no_proxy`}}",
     "preseed_path": "ubuntu-14.04/preseed.cfg",
