@@ -6,9 +6,12 @@ require 'net/http'
 
 # Enables `bundle exec rake do_all[ubuntu-12.04-amd64,centos-7.1-x86_64]
 # http://blog.stevenocchipinti.com/2013/10/18/rake-task-with-an-arbitrary-number-of-arguments/
+#
+
+PUBLIC_BOXES = %w(centos-5.11-i386 centos-5.11-x86_64 centos-6.6-i386 centos-6.6-x86_64 centos-7.1-x86_64 debian-6.0.10-amd64 debian-6.0.10-i386 debian-7.8-amd64 debian-7.8-i386 debian-8.1-amd64 debian-8.1-i386 opensuse-13.2-i386 opensuse-13.2-x86_64 ubuntu-10.04-amd64 ubuntu-10.04-i386 ubuntu-12.04-amd64 ubuntu-12.04-i386 ubuntu-14.04-amd64 ubuntu-14.04-i386 ubuntu-14.10-amd64 ubuntu-14.10-i386 ubuntu-15.04-amd64 ubuntu-15.04-i386 freebsd-9.3-amd64 freebsd-9.3-i386 freebsd-10.1-amd64 freebsd-10.1-i386)
 
 desc 'Build, Publish, Release a set of platforms'
-task :do_all do |task, args|
+task :do_all do |t, args|
   args.extras.each do |a|
     # build stage
     Rake::Task['build_box'].invoke(a)
@@ -31,7 +34,17 @@ task :build_box, :template do |t, args|
   sh "#{build_command(args[:template])}"
 end
 
-desc 'Upload boxes'
+desc 'Build all boxes'
+task :build_all do |t, args|
+ args.extras.empty? ? response = PUBLIC_BOXES : response = args.extras 
+ puts "Building: #{response}"
+ response.each do |a|
+   Rake::Task['build_box'].invoke(a)
+   Rake::Task['build_box'].reenable
+ end
+end
+
+desc 'Upload all boxes'
 task :upload_all do
   metadata_files.each do |metadata_file|
     puts "Processing #{metadata_file} for upload."
@@ -55,7 +68,7 @@ task :upload_box_s3, :metadata_file do |f, args|
   upload_to_s3(metadata['name'], metadata['version'], metadata['providers'])
 end
 
-desc 'Release all boxes for a version'
+desc 'Release all boxes for a given version'
 task :release_all do
   metadata_files.each do |metadata_file|
     puts "Processing #{metadata_file} for release."
@@ -73,9 +86,13 @@ desc 'Delete all boxes for a version'
 task :delete_all, :version do |v, args|
   delete_version(args[:version])
 end
+
 desc 'Clean the build directory'
 task :clean do
+  puts 'Removing builds/*.{box,json}'
   `rm -rf builds/*.{box,json}`
+  puts 'Removing packer-* directories'
+  `rm -rf packer-*`
 end
 
 def atlas_api

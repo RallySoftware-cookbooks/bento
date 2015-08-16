@@ -7,5 +7,5 @@ env
 source ~/.bashrc
 
 echo "--- Build Boxes"
-rake build_box[$BOX_LIST]
+rake build_all[$BOX_LIST]
 
