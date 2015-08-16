@@ -8,7 +8,7 @@ require 'net/http'
 # http://blog.stevenocchipinti.com/2013/10/18/rake-task-with-an-arbitrary-number-of-arguments/
 #
 
-PUBLIC_BOXES = %w(centos-5.11-i386 centos-5.11-x86_64 centos-6.6-i386 centos-6.6-x86_64 centos-7.1-x86_64 debian-6.0.10-amd64 debian-6.0.10-i386 debian-7.8-amd64 debian-7.8-i386 debian-8.1-amd64 debian-8.1-i386 opensuse-13.2-i386 opensuse-13.2-x86_64 ubuntu-10.04-amd64 ubuntu-10.04-i386 ubuntu-12.04-amd64 ubuntu-12.04-i386 ubuntu-14.04-amd64 ubuntu-14.04-i386 ubuntu-14.10-amd64 ubuntu-14.10-i386 ubuntu-15.04-amd64 ubuntu-15.04-i386 freebsd-9.3-amd64 freebsd-9.3-i386 freebsd-10.1-amd64 freebsd-10.1-i386)
+PUBLIC_BOXES = %w(centos-5.11-i386 centos-5.11-x86_64 centos-6.7-i386 centos-6.7-x86_64 centos-7.1-x86_64 debian-6.0.10-amd64 debian-6.0.10-i386 debian-7.8-amd64 debian-7.8-i386 debian-8.1-amd64 debian-8.1-i386 opensuse-13.2-i386 opensuse-13.2-x86_64 ubuntu-10.04-amd64 ubuntu-10.04-i386 ubuntu-12.04-amd64 ubuntu-12.04-i386 ubuntu-14.04-amd64 ubuntu-14.04-i386 ubuntu-14.10-amd64 ubuntu-14.10-i386 ubuntu-15.04-amd64 ubuntu-15.04-i386 freebsd-9.3-amd64 freebsd-9.3-i386 freebsd-10.1-amd64 freebsd-10.1-i386)
 
 desc 'Build, Publish, Release a set of platforms'
 task :do_all do |t, args|
