@@ -6,6 +6,5 @@ env
 
 source ~/.bashrc
 
-echo "--- Build Boxes"
-rake build_all[$BOX_LIST]
-
+echo "--- Build $BOX_LIST"
+bin/bento build --version $BENTO_VERSION $BOX_LIST
