@@ -13,7 +13,8 @@ function inline_image {
 inline_image 'https://oaxacaborn.files.wordpress.com/2012/02/clean-all-the-things-via-hyperbole-and-a-half.png' 'Clean All The Things'
 
 
-echo "--- Cleaning up VirtualBox"
+echo "--- Cleaning up after VirtualBox"
+
 for i in `vboxmanage list runningvms | awk '{print $1}' | sed 's/"//g'`
 do
   echo "Powering off $i"
@@ -33,5 +34,20 @@ do
   rm -rf /Users/buildkite/VirtualBox\ VMs/$i
 done
 
-echo "--- Cleaning up packer cru"
+echo "--- Cleaning up after Parallels"
+
+for i in `prlctl list --no-header --output name`
+do
+  echo "Powering off $i"
+  prlctl stop $i --kill
+  sleep 10
+done
+
+for i in `prlctl list --all --no-header --output uuid`
+do
+  echo "Unregistering $i"
+  prlctl unregister $i
+done
+
+echo "--- Cleaning up after Packer"
 rake clean
