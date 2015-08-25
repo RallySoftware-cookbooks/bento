@@ -6,16 +6,11 @@ require 'net/http'
 
 # Enables `bundle exec rake do_all[ubuntu-12.04-amd64,centos-7.1-x86_64]
 # http://blog.stevenocchipinti.com/2013/10/18/rake-task-with-an-arbitrary-number-of-arguments/
-#
-
-PUBLIC_BOXES = %w(centos-5.11-i386 centos-5.11-x86_64 centos-6.7-i386 centos-6.7-x86_64 centos-7.1-x86_64 debian-6.0.10-amd64 debian-6.0.10-i386 debian-7.8-amd64 debian-7.8-i386 debian-8.1-amd64 debian-8.1-i386 opensuse-13.2-i386 opensuse-13.2-x86_64 ubuntu-10.04-amd64 ubuntu-10.04-i386 ubuntu-12.04-amd64 ubuntu-12.04-i386 ubuntu-14.04-amd64 ubuntu-14.04-i386 ubuntu-14.10-amd64 ubuntu-14.10-i386 ubuntu-15.04-amd64 ubuntu-15.04-i386 freebsd-9.3-amd64 freebsd-9.3-i386 freebsd-10.1-amd64 freebsd-10.1-i386)
-
-desc 'Build, Publish, Release a set of platforms'
-task :do_all do |t, args|
+task :do_all do |task, args|
   args.extras.each do |a|
     # build stage
-    Rake::Task['build_box'].invoke(a)
-    Rake::Task['build_box'].reenable
+    Rake::Task['build_box:all'].invoke(a)
+    Rake::Task['build_box:all'].reenable
   end
 
   # publish stage
@@ -25,23 +20,32 @@ task :do_all do |t, args|
   # release stage
   Rake::Task['release_all'].invoke
   Rake::Task['release_all'].reenable
-
 end
 
-# bundle exec rake build_box[ubuntu-12.04-amd64]
-desc 'Build a single bento box'
-task :build_box, :template do |t, args|
-  sh "#{build_command(args[:template])}"
-end
+namespace :build_box do
+  desc 'Build a single box for Virtualbox provider'
+  task :virtualbox, :template do |t, args|
+	provider = 'virtualbox-iso'
+    sh "#{build_command(args[:template], provider)}"
+  end
 
-desc 'Build all boxes'
-task :build_all do |t, args|
- args.extras.empty? ? response = PUBLIC_BOXES : response = args.extras 
- puts "Building: #{response}"
- response.each do |a|
-   Rake::Task['build_box'].invoke(a)
-   Rake::Task['build_box'].reenable
- end
+  desc 'Build a single box for VMware provider'
+  task :fusion, :template do |t, args|
+	provider = 'vmware-iso'
+    sh "#{build_command(args[:template], provider)}"
+  end
+
+  desc 'Build a single box for Parallels provider'
+  task :parallels, :template do |t, args|
+	provider = 'parallels-iso'
+    sh "#{build_command(args[:template], provider)}"
+  end
+
+  desc 'Build a single box for all provider'
+  task :all, :template do |t, args|
+	provider = 'all'
+    sh "#{build_command(args[:template], provider)}"
+  end
 end
 
 desc 'Upload all boxes'
@@ -191,13 +195,9 @@ def box_metadata(metadata_file)
   metadata
 end
 
-def build_command(template)
+def build_command(template, provider)
   cmd = %W[./bin/bento build #{template}]
-  providers = %W[vmware-iso parallels-iso virtualbox-iso]
-  providers.delete('virtualbox-iso') if which('vboxmanage')
-  providers.delete('vmware-iso') if which('vmrun')
-  providers.delete('parallels-iso') if which('prlctl')
-  cmd.insert(2, "--except #{providers.join(",")}") if !providers.empty?
+  cmd.insert(2, "--only #{provider}") unless provider == 'all'
   cmd.insert(2, "--mirror #{ENV['PACKER_MIRROR']}") if private?(template)
   cmd.insert(2, "--version #{ENV['BENTO_VERSION']}") if ENV['BENTO_VERSION']
   cmd.join(" ")
@@ -292,7 +292,7 @@ def revoke_version(version)
 
   boxes.each do |b|
     b['versions'].each do |v|
-      if v['version'] == '2.0.0'
+      if v['version'] == ENV['BENTO_VERSION']
         puts "Revoking version #{v['version']} of box #{b['name']}"
         req = request('put', v['revoke_url'], { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
         if req.code == '200'
@@ -311,7 +311,7 @@ def delete_version(version)
 
   boxes.each do |b|
     b['versions'].each do |v|
-      if v['version'] == '2.0.0'
+      if v['version'] == ENV['BENTO_VERSION']
         puts "Deleting version #{v['version']} of box #{b['name']}"
         puts "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}"
         req = request('delete', "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}", { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
