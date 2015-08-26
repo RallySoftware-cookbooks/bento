@@ -9,8 +9,8 @@ require 'net/http'
 task :do_all do |task, args|
   args.extras.each do |a|
     # build stage
-    Rake::Task['build_box:all'].invoke(a)
-    Rake::Task['build_box:all'].reenable
+    Rake::Task['build_box'].invoke(a)
+    Rake::Task['build_box'].reenable
   end
 
   # publish stage
@@ -22,30 +22,10 @@ task :do_all do |task, args|
   Rake::Task['release_all'].reenable
 end
 
-namespace :build_box do
-  desc 'Build a single box for Virtualbox provider'
-  task :virtualbox, :template do |t, args|
-	provider = 'virtualbox-iso'
-    sh "#{build_command(args[:template], provider)}"
-  end
 
-  desc 'Build a single box for VMware provider'
-  task :fusion, :template do |t, args|
-	provider = 'vmware-iso'
-    sh "#{build_command(args[:template], provider)}"
-  end
-
-  desc 'Build a single box for Parallels provider'
-  task :parallels, :template do |t, args|
-	provider = 'parallels-iso'
-    sh "#{build_command(args[:template], provider)}"
-  end
-
-  desc 'Build a single box for all provider'
-  task :all, :template do |t, args|
-	provider = 'all'
-    sh "#{build_command(args[:template], provider)}"
-  end
+desc 'Build a bento template'
+task :build_box, :template do |t, args|
+  sh "#{build_command(args[:template])}"
 end
 
 desc 'Upload all boxes'
@@ -195,9 +175,9 @@ def box_metadata(metadata_file)
   metadata
 end
 
-def build_command(template, provider)
+def build_command(template)
   cmd = %W[./bin/bento build #{template}]
-  cmd.insert(2, "--only #{provider}") unless provider == 'all'
+  cmd.insert(2, "--only #{ENV['BENTO_PROVIDERS']}") if ENV['BENTO_PROVIDERS']
   cmd.insert(2, "--mirror #{ENV['PACKER_MIRROR']}") if private?(template)
   cmd.insert(2, "--version #{ENV['BENTO_VERSION']}") if ENV['BENTO_VERSION']
   cmd.join(" ")
@@ -296,10 +276,10 @@ def revoke_version(version)
         puts "Revoking version #{v['version']} of box #{b['name']}"
         req = request('put', v['revoke_url'], { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
         if req.code == '200'
-          puts "Version #{v['version']} of box #{b['name']} has been successfully revoked" 
+          puts "Version #{v['version']} of box #{b['name']} has been successfully revoked"
         else
           puts "Something went wrong #{req.code}"
-        end 
+        end
       end
     end
   end
@@ -316,10 +296,10 @@ def delete_version(version)
         puts "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}"
         req = request('delete', "#{atlas_api}/box/#{atlas_org}/#{b['name']}/version/#{v['version']}", { 'access_token' => atlas_token }, { 'Content-Type' => 'application/json' })
         if req.code == '200'
-          puts "Version #{v['version']} of box #{b['name']} has been successfully deleted" 
+          puts "Version #{v['version']} of box #{b['name']} has been successfully deleted"
         else
           puts "Something went wrong #{req.code} #{req.body}"
-        end 
+        end
       end
     end
   end
